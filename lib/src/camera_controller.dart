@@ -150,6 +150,8 @@ class _CameraController implements CameraController {
       id = null;
     }
     barcodesController.close();
+    torchState.dispose();
+    args.dispose();
   }
 
   void stop() => method.invokeMethod('stop');
