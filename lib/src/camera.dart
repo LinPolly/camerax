@@ -1,18 +1,21 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'barcode.dart';
-import 'camera_args.dart';
+import 'camera_view_args.dart';
 import 'camera_facing.dart';
+import 'messenger.dart';
 import 'torch_state.dart';
 import 'util.dart';
 
+final Camera camera = _Camera();
+
 /// A camera controller.
-abstract class CameraController {
+abstract class Camera {
   /// Arguments for [CameraView].
-  ValueNotifier<CameraArgs> get args;
+  ValueNotifier<CameraViewArgs> get viewArgs;
 
   /// Torch state of the camera.
   ValueNotifier<TorchState> get torchState;
@@ -20,30 +23,17 @@ abstract class CameraController {
   /// A stream of barcodes.
   Stream<Barcode> get barcodes;
 
-  /// Create a [CameraController].
-  ///
-  /// [facing] target facing used to select camera.
-  ///
-  /// [formats] the barcode formats for image analyzer.
-  factory CameraController([CameraFacing facing = CameraFacing.back]) =>
-      _CameraController(facing);
-
   /// Start the camera asynchronously.
-  Future<void> startAsync();
+  void start(CameraFacing facing);
 
   /// Switch the torch's state.
   void torch();
 
   /// Release the resources of the camera.
-  void dispose();
+  void stop();
 }
 
-class _CameraController implements CameraController {
-  static const MethodChannel method =
-      MethodChannel('yanshouwang.dev/camerax/method');
-  static const EventChannel event =
-      EventChannel('yanshouwang.dev/camerax/event');
-
+class _Camera implements Camera {
   static const undetermined = 0;
   static const authorized = 1;
   static const denied = 2;
@@ -51,12 +41,10 @@ class _CameraController implements CameraController {
   static const analyze_none = 0;
   static const analyze_barcode = 1;
 
-  static int id;
-  static StreamSubscription subscription;
+  StreamSubscription subscription;
 
-  final CameraFacing facing;
   @override
-  final ValueNotifier<CameraArgs> args;
+  final ValueNotifier<CameraViewArgs> viewArgs;
   @override
   final ValueNotifier<TorchState> torchState;
 
@@ -66,26 +54,20 @@ class _CameraController implements CameraController {
   @override
   Stream<Barcode> get barcodes => barcodesController.stream;
 
-  _CameraController(this.facing)
-      : args = ValueNotifier(null),
+  _Camera()
+      : viewArgs = ValueNotifier(null),
         torchState = ValueNotifier(TorchState.off),
         torchable = false {
-    // In case new instance before dispose.
-    if (id != null) {
-      stop();
-    }
-    id = hashCode;
     // Create barcode stream controller.
     barcodesController = StreamController.broadcast(
-      onListen: () => tryAnalyze(analyze_barcode),
-      onCancel: () => tryAnalyze(analyze_none),
+      onListen: () => method.invokeMethod('analyze', analyze_barcode),
+      onCancel: () => method.invokeMethod('analyze', analyze_none),
     );
     // Listen event handler.
-    subscription =
-        event.receiveBroadcastStream().listen((data) => handleEvent(data));
+    subscription = stream.listen(handleEvent);
   }
 
-  void handleEvent(Map<dynamic, dynamic> event) {
+  void handleEvent(dynamic event) {
     final name = event['name'];
     final data = event['data'];
     switch (name) {
@@ -102,16 +84,8 @@ class _CameraController implements CameraController {
     }
   }
 
-  void tryAnalyze(int mode) {
-    if (hashCode != id) {
-      return;
-    }
-    method.invokeMethod('analyze', mode);
-  }
-
   @override
-  Future<void> startAsync() async {
-    ensure('startAsync');
+  void start(CameraFacing facing) async {
     // Check authorization state.
     var state = await method.invokeMethod('state');
     if (state == undetermined) {
@@ -126,13 +100,12 @@ class _CameraController implements CameraController {
         await method.invokeMapMethod<String, dynamic>('start', facing.index);
     final textureId = answer['textureId'];
     final size = toSize(answer['size']);
-    args.value = CameraArgs(textureId, size);
+    viewArgs.value = CameraViewArgs(textureId, size);
     torchable = answer['torchable'];
   }
 
   @override
   void torch() {
-    ensure('torch');
     if (!torchable) {
       return;
     }
@@ -142,24 +115,7 @@ class _CameraController implements CameraController {
   }
 
   @override
-  void dispose() {
-    if (hashCode == id) {
-      stop();
-      subscription.cancel();
-      subscription = null;
-      id = null;
-    }
-    barcodesController.close();
-    torchState.dispose();
-    args.dispose();
-  }
-
-  void stop() => method.invokeMethod('stop');
-
-  void ensure(String name) {
-    final message =
-        'CameraController.$name called after CameraController.dispose\n'
-        'CameraController methods should not be used after calling dispose.';
-    assert(hashCode == id, message);
+  void stop() {
+    method.invokeMethod('stop');
   }
 }

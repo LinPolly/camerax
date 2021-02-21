@@ -1,25 +1,19 @@
 import 'package:flutter/material.dart';
 
-import 'camera_args.dart';
-import 'camera_controller.dart';
+import 'camera_view_args.dart';
+import 'camera.dart';
 
 /// A widget showing a live camera preview.
 class CameraView extends StatelessWidget {
-  /// The controller of the camera.
-  final CameraController controller;
-
-  /// Create a [CameraView] with a [controller], the [controller] must has been initialized.
-  CameraView(this.controller);
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: controller.args,
+      valueListenable: camera.viewArgs,
       builder: (context, value, child) => _build(context, value),
     );
   }
 
-  Widget _build(BuildContext context, CameraArgs value) {
+  Widget _build(BuildContext context, CameraViewArgs value) {
     if (value == null) {
       return Container(color: Colors.black);
     } else {

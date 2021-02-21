@@ -8,7 +8,6 @@ class AnalyzeView extends StatefulWidget {
 
 class _AnalyzeViewState extends State<AnalyzeView>
     with SingleTickerProviderStateMixin {
-  CameraController cameraController;
   AnimationController animationConrtroller;
   Animation<double> offsetAnimation;
   Animation<double> opacityAnimation;
@@ -16,7 +15,6 @@ class _AnalyzeViewState extends State<AnalyzeView>
   @override
   void initState() {
     super.initState();
-    cameraController = CameraController();
     animationConrtroller =
         AnimationController(duration: Duration(seconds: 2), vsync: this);
     offsetAnimation = Tween(begin: 0.2, end: 0.8).animate(animationConrtroller);
@@ -32,7 +30,7 @@ class _AnalyzeViewState extends State<AnalyzeView>
     return Scaffold(
       body: Stack(
         children: [
-          CameraView(cameraController),
+          CameraView(),
           AnimatedLine(
             offsetAnimation: offsetAnimation,
             opacityAnimation: opacityAnimation,
@@ -50,7 +48,7 @@ class _AnalyzeViewState extends State<AnalyzeView>
             margin: EdgeInsets.only(bottom: 80.0),
             child: IconButton(
               icon: ValueListenableBuilder(
-                valueListenable: cameraController.torchState,
+                valueListenable: camera.torchState,
                 builder: (context, state, child) {
                   final color =
                       state == TorchState.off ? Colors.grey : Colors.white;
@@ -58,7 +56,7 @@ class _AnalyzeViewState extends State<AnalyzeView>
                 },
               ),
               iconSize: 32.0,
-              onPressed: () => cameraController.torch(),
+              onPressed: () => camera.torch(),
             ),
           ),
         ],
@@ -69,14 +67,14 @@ class _AnalyzeViewState extends State<AnalyzeView>
   @override
   void dispose() {
     animationConrtroller.dispose();
-    cameraController.dispose();
+    camera.stop();
     super.dispose();
   }
 
   void start() async {
-    await cameraController.startAsync();
+    camera.start(CameraFacing.back);
     try {
-      final barcode = await cameraController.barcodes.first;
+      final barcode = await camera.barcodes.first;
       display(barcode);
     } catch (e) {
       print(e);
