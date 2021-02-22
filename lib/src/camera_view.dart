@@ -1,34 +1,35 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'camera_view_args.dart';
-import 'camera.dart';
 
 /// A widget showing a live camera preview.
 class CameraView extends StatelessWidget {
+  final ValueNotifier<CameraViewArgs> args;
+
+  CameraView(this.args);
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: camera.viewArgs,
-      builder: (context, value, child) => _build(context, value),
-    );
-  }
-
-  Widget _build(BuildContext context, CameraViewArgs value) {
-    if (value == null) {
-      return Container(color: Colors.black);
-    } else {
-      return ClipRect(
-        child: Transform.scale(
-          scale: value.size.fill(MediaQuery.of(context).size),
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: value.size.aspectRatio,
-              child: Texture(textureId: value.textureId),
+      valueListenable: args,
+      builder: (context, CameraViewArgs args, child) {
+        if (args == null) {
+          return Container(color: Color.fromARGB(255, 0, 0, 0));
+        } else {
+          return ClipRect(
+            child: Transform.scale(
+              scale: args.size.fill(MediaQuery.of(context).size),
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: args.size.aspectRatio,
+                  child: Texture(textureId: args.textureId),
+                ),
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        }
+      },
+    );
   }
 }
 

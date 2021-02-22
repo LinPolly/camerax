@@ -1,21 +1,22 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'barcode.dart';
+import 'camera_view.dart';
 import 'camera_view_args.dart';
-import 'camera_facing.dart';
+import 'enum.dart';
 import 'messenger.dart';
-import 'torch_state.dart';
 import 'util.dart';
-
-final Camera camera = _Camera();
 
 /// A camera controller.
 abstract class Camera {
+  factory Camera() => _Camera();
+
   /// Arguments for [CameraView].
-  ValueNotifier<CameraViewArgs> get viewArgs;
+  Widget get view;
 
   /// Torch state of the camera.
   ValueNotifier<TorchState> get torchState;
@@ -23,14 +24,17 @@ abstract class Camera {
   /// A stream of barcodes.
   Stream<Barcode> get barcodes;
 
-  /// Start the camera asynchronously.
+  /// Start the camera.
   void start(CameraFacing facing);
+
+  /// Stop the camera.
+  void stop();
 
   /// Switch the torch's state.
   void torch();
 
   /// Release the resources of the camera.
-  void stop();
+  void dispose();
 }
 
 class _Camera implements Camera {
@@ -43,14 +47,16 @@ class _Camera implements Camera {
 
   StreamSubscription subscription;
 
-  @override
   final ValueNotifier<CameraViewArgs> viewArgs;
+
   @override
   final ValueNotifier<TorchState> torchState;
 
   bool torchable;
   StreamController<Barcode> barcodesController;
 
+  @override
+  Widget get view => CameraView(viewArgs);
   @override
   Stream<Barcode> get barcodes => barcodesController.stream;
 
@@ -68,15 +74,15 @@ class _Camera implements Camera {
   }
 
   void handleEvent(dynamic event) {
-    final name = event['name'];
-    final data = event['data'];
-    switch (name) {
+    final key = event['key'];
+    final value = event['value'];
+    switch (key) {
       case 'torchState':
-        final state = TorchState.values[data];
+        final state = TorchState.values[value];
         torchState.value = state;
         break;
       case 'barcode':
-        final barcode = Barcode.fromNative(data);
+        final barcode = Barcode.fromNative(value);
         barcodesController.add(barcode);
         break;
       default:
@@ -105,6 +111,11 @@ class _Camera implements Camera {
   }
 
   @override
+  void stop() {
+    method.invokeMethod('stop');
+  }
+
+  @override
   void torch() {
     if (!torchable) {
       return;
@@ -115,7 +126,10 @@ class _Camera implements Camera {
   }
 
   @override
-  void stop() {
-    method.invokeMethod('stop');
+  void dispose() {
+    subscription.cancel();
+    barcodesController.close();
+    torchState.dispose();
+    viewArgs.dispose();
   }
 }

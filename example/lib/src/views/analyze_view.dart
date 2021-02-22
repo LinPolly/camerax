@@ -8,6 +8,7 @@ class AnalyzeView extends StatefulWidget {
 
 class _AnalyzeViewState extends State<AnalyzeView>
     with SingleTickerProviderStateMixin {
+  Camera camera;
   AnimationController animationConrtroller;
   Animation<double> offsetAnimation;
   Animation<double> opacityAnimation;
@@ -15,6 +16,8 @@ class _AnalyzeViewState extends State<AnalyzeView>
   @override
   void initState() {
     super.initState();
+
+    camera = Camera();
     animationConrtroller =
         AnimationController(duration: Duration(seconds: 2), vsync: this);
     offsetAnimation = Tween(begin: 0.2, end: 0.8).animate(animationConrtroller);
@@ -30,7 +33,7 @@ class _AnalyzeViewState extends State<AnalyzeView>
     return Scaffold(
       body: Stack(
         children: [
-          CameraView(),
+          camera.view,
           AnimatedLine(
             offsetAnimation: offsetAnimation,
             opacityAnimation: opacityAnimation,
@@ -67,7 +70,7 @@ class _AnalyzeViewState extends State<AnalyzeView>
   @override
   void dispose() {
     animationConrtroller.dispose();
-    camera.stop();
+    camera.dispose();
     super.dispose();
   }
 
