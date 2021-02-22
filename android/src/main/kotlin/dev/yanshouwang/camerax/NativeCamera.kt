@@ -8,13 +8,16 @@ import androidx.annotation.IntDef
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.view.TextureRegistry
 
+@androidx.camera.core.ExperimentalGetImage
 class NativeCamera(private val activity: Activity, private val textureRegistry: TextureRegistry) {
     private var analyzeMode = AnalyzeMode.NONE
 
@@ -25,7 +28,7 @@ class NativeCamera(private val activity: Activity, private val textureRegistry: 
     fun start(call: MethodCall, result: MethodChannel.Result, messenger: (Any) -> Unit?) {
         val future = ProcessCameraProvider.getInstance(activity)
         val executor = ContextCompat.getMainExecutor(activity)
-        future.addListener({
+        future.addListener(Runnable {
             cameraProvider = future.get()
             textureEntry = textureRegistry.createSurfaceTexture()
             val textureId = textureEntry.id()
@@ -35,7 +38,7 @@ class NativeCamera(private val activity: Activity, private val textureRegistry: 
                 val texture = textureEntry.surfaceTexture()
                 texture.setDefaultBufferSize(resolution.width, resolution.height)
                 val surface = Surface(texture)
-                request.provideSurface(surface, executor, { })
+                request.provideSurface(surface, executor, Consumer { })
             }
             val preview = Preview.Builder().build().apply { setSurfaceProvider(surfaceProvider) }
             // Analyzer
@@ -67,7 +70,7 @@ class NativeCamera(private val activity: Activity, private val textureRegistry: 
                     if (call.arguments == 0) CameraSelector.DEFAULT_FRONT_CAMERA
                     else CameraSelector.DEFAULT_BACK_CAMERA
             camera = cameraProvider.bindToLifecycle(owner, selector, preview, analysis)
-            camera.cameraInfo.torchState.observe(owner, { state ->
+            camera.cameraInfo.torchState.observe(owner, Observer { state ->
                 // TorchState.OFF = 0; TorchState.ON = 1
                 val event = mapOf("name" to "torchState", "data" to state)
                 messenger(event)
