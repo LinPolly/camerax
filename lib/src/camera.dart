@@ -13,7 +13,7 @@ import 'util.dart';
 
 /// A camera controller.
 abstract class Camera {
-  factory Camera() => _Camera();
+  factory Camera(CameraFacing facing) => _Camera(facing);
 
   /// Arguments for [CameraView].
   Widget get view;
@@ -25,7 +25,7 @@ abstract class Camera {
   Stream<Barcode> get barcodes;
 
   /// Start the camera.
-  void start(CameraFacing facing);
+  void start();
 
   /// Stop the camera.
   void stop();
@@ -45,9 +45,10 @@ class _Camera implements Camera {
   static const analyze_none = 0;
   static const analyze_barcode = 1;
 
-  StreamSubscription subscription;
-
+  final CameraFacing facing;
   final ValueNotifier<CameraViewArgs> viewArgs;
+
+  StreamSubscription subscription;
 
   @override
   final ValueNotifier<TorchState> torchState;
@@ -60,17 +61,17 @@ class _Camera implements Camera {
   @override
   Stream<Barcode> get barcodes => barcodesController.stream;
 
-  _Camera()
+  _Camera(this.facing)
       : viewArgs = ValueNotifier(null),
         torchState = ValueNotifier(TorchState.off),
         torchable = false {
+    // Listen event handler.
+    subscription = stream.listen(handleEvent);
     // Create barcode stream controller.
     barcodesController = StreamController.broadcast(
       onListen: () => method.invokeMethod('analyze', analyze_barcode),
       onCancel: () => method.invokeMethod('analyze', analyze_none),
     );
-    // Listen event handler.
-    subscription = stream.listen(handleEvent);
   }
 
   void handleEvent(dynamic event) {
@@ -91,7 +92,7 @@ class _Camera implements Camera {
   }
 
   @override
-  void start(CameraFacing facing) async {
+  void start() async {
     // Check authorization state.
     var state = await method.invokeMethod('state');
     if (state == undetermined) {

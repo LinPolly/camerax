@@ -28,7 +28,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class Camera2(@LensFacing val facing: Int, private val activity: Activity, private val textureRegistry: TextureRegistry) {
+class Camera(@LensFacing val facing: Int, private val activity: Activity, private val textureRegistry: TextureRegistry) {
     private val cameraManager = activity.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private val cameraId: String
     private val previewSize: Size

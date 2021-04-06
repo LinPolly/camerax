@@ -1,17 +1,12 @@
 package dev.yanshouwang.camerax
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.annotation.NonNull
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.PluginRegistry
 
 /** CameraXPlugin */
 class CameraXPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
@@ -20,7 +15,7 @@ class CameraXPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHand
     private lateinit var method: MethodChannel
     private lateinit var event: EventChannel
 
-    private val cameras: MutableMap<Int, NativeCamera> = mutableMapOf()
+    private val cameras: MutableMap<Int, Camera> = mutableMapOf()
     private var sink: EventChannel.EventSink? = null
 
     private val textureRegistry get() = flutterPluginBinding.textureRegistry
@@ -57,7 +52,7 @@ class CameraXPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHand
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         val hashCode = call.argument<Int>("hashCode")!!
         when (call.method) {
-            "create" -> cameras[hashCode] = NativeCamera(activity, textureRegistry)
+            "create" -> cameras[hashCode] = Camera(activity, textureRegistry)
             "start" -> cameras[hashCode]!!.start(call, result) { event: Any -> sink?.success(event) }
             "stop" -> cameras[hashCode]!!.stop(result)
             "torch" -> cameras[hashCode]!!.torch(call, result)
